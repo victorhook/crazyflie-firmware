@@ -279,7 +279,7 @@ void __attribute__((used)) DMA1_Stream3_IRQHandler(void)
 }
 #endif
 
-void __attribute__((used)) USART3_IRQHandler(void)
+void __attribute__((used)) USART3_IRQHandler_not_used(void)
 {
   uint8_t rxData;
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
