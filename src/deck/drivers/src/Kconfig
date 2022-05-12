@@ -1,3 +1,9 @@
+config DECK_SLAMDECK
+    bool "Support the Slamdeck"
+    default y
+    help
+        Do you want some extra SLAM to the crazyflie?
+
 config DECK_ACTIVE_MARKER
     bool "Support the Active marker deck"
     default y
