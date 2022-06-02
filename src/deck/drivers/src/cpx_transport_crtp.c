@@ -43,8 +43,12 @@ typedef struct {
 
 static crtp_transport_packet_t rxp;
 
-
+// These two flags are used to know when it's OK to start sending data through
+// CPX through CRTP. To start sending data through CPX we must first receive
+// a packet. If this is not done, the connection process and TOC download
+// can be very slow as the link is congested by CPX packets.
 static bool sending = false;
+static bool sendRequest = false;
 
 
 static void crtpCpxCallback(CRTPPacket* packet)
@@ -53,13 +57,9 @@ static void crtpCpxCallback(CRTPPacket* packet)
     memcpy(&rxp.payload, packet->data, packet->size);
     rxp.payloadLength = packet->size; // CRTP packet size is data + header.
 
-    sending = true;
+    sendRequest = true;
 
-    // Extract payload length from CRTP header.
-    //rxp.payloadLength = getPayloadLength(packet);
-
-    // Put packet in queue, ready to be read.
-    //xQueueSend(rxQueue, &rxp, portMAX_DELAY);
+    // TODO: Create CPX packet and put in CPX queue?
 }
 
 void crtpTxTask()
@@ -75,9 +75,17 @@ void crtpTxTask()
     };
 
     while (1) {
-        if (!crtpIsConnected() || !sending) {
+        if (!crtpIsConnected()) {
+            sending = false;
+        }
+
+        if (sendRequest) {
+            sendRequest = false;
+            sending = true;
+        }
+
+        if (!sending) {
             vTaskDelay(10 / portTICK_PERIOD_MS);
-            //sending = false;
             continue;
         }
 
@@ -95,7 +103,6 @@ void crtpTxTask()
 
         //setCpxPayloadLength(&crtpPacket, cpxPacket.dataLength);
         crtpPacket.size = cpxPacket.dataLength + CPX_ROUTING_PACKED_SIZE;
-        //crtpPacket.size = 30;
 
         crtpSendPacketBlock(&crtpPacket);
         vTaskDelay(M2T(3));
@@ -129,34 +136,6 @@ void crtpTransportSend(const CPXPacket_t* cpxPacket)
 {
     ASSERT(cpxPacket->dataLength <= CRTP_TRANSPORT_MTU - CPX_ROUTING_PACKED_SIZE);
     xQueueSend(txQueue, cpxPacket, portMAX_DELAY);
-
-    /*
-    ASSERT(cpxPacket->dataLength <= CRTP_TRANSPORT_MTU - CPX_ROUTING_PACKED_SIZE);
-    static CPXRoutingPacked_t routePacked;
-    static int cpxHeaderSize = sizeof(CPXRoutingPacked_t);
-
-    static CRTPPacket crtpPacket = {
-        .port = CRTP_PORT_CPX,
-        .channel = 0
-    };
-
-    //xQueueReceive(txQueue, &cpxPacket, portMAX_DELAY);
-    cpxRouteToPacked(&cpxPacket->route, &routePacked);
-
-    // Copy route header
-    memcpy(crtpPacket.data, &routePacked, cpxHeaderSize);
-
-    // Copy payload data
-    memcpy(&crtpPacket.data[cpxHeaderSize], cpxPacket->data, cpxPacket->dataLength);
-
-    crtpPacket.size = cpxPacket->dataLength + CPX_ROUTING_PACKED_SIZE;
-    //crtpPacket.size = 30;
-
-    crtpSendPacketBlock(&crtpPacket);
-
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-    */
-
 }
 
 void crtpTransportReceive(CPXPacket_t* packet)

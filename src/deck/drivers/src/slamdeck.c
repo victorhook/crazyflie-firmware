@@ -173,17 +173,11 @@ static const DeckDriver slamdeck_deck = {
     .test = slamdeckTest,
 };
 
-//LOG_GROUP_START(slamdeck)
-//LOG_ADD(LOG_UINT8, receivebyte, &byte)
-//LOG_GROUP_STOP(slamdeck)
-
 PARAM_GROUP_START(deck)
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcSLAMDeck, &isInit)
 PARAM_GROUP_STOP(deck)
 
 DECK_DRIVER(slamdeck_deck);
-
-
 
 
 static void slamdeckSendData()
